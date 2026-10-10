@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <meta name="theme-color" content="#100d1d">
+  <title>GiftGram</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand-mark">✦</div>
+      <div><div class="brand">GiftGram</div><div class="subbrand">YOUR DIGITAL TREASURE</div></div>
+      <button class="avatar" id="avatar">G</button>
+    </header>
+
+    <main>
+      <section class="hero panel">
+        <div class="hero-glow"></div>
+        <div class="eyebrow">ТВОЯ КОЛЛЕКЦИЯ НАЧИНАЕТСЯ ЗДЕСЬ</div>
+        <h1>Открывай.<br><span>Собирай.</span> Улучшай.</h1>
+        <p>Забирай ежедневные награды и охоться за редкими NFT.</p>
+        <div class="balance-row">
+          <div><div class="muted">ТВОЙ БАЛАНС</div><div class="balance"><span>✦</span> <b id="stars">—</b></div></div>
+          <button class="primary small" id="dailyBtn">Забрать +100 ✦</button>
+        </div>
+        <div class="hero-orb orb-one">✦</div><div class="hero-orb orb-two">◇</div>
+      </section>
+
+      <section class="section-head"><div><div class="eyebrow">УДАЧА УЖЕ РЯДОМ</div><h2>Кейсы</h2></div><span class="tag">50 ✦ / кейс</span></section>
+      <section class="case-grid">
+        <button class="case-card featured" id="caseBtn">
+          <div class="case-art"><div class="case-halo"></div><div class="chest">🎁</div><div class="spark s1">✦</div><div class="spark s2">✧</div></div>
+          <div class="case-title">Mystery Gift</div><div class="case-desc">Сюрприз внутри</div><div class="case-action">ОТКРЫТЬ ЗА 50 ✦</div>
+        </button>
+        <div class="case-card locked"><div class="case-art"><div class="chest">💠</div><div class="lock">🔒</div></div><div class="case-title">Crystal Vault</div><div class="case-desc">Скоро появится</div><div class="case-action disabled">СКОРО</div></div>
+      </section>
+
+      <section class="section-head inventory-head"><div><div class="eyebrow">ТВОИ СОКРОВИЩА</div><h2>Мои NFT <span class="count" id="nftCount">0</span></h2></div></section>
+      <section id="inventory" class="inventory"><div class="empty-state"><div>🪄</div><b>Коллекция пока пуста</b><p>Открой свой первый кейс и найди сокровище.</p></div></section>
+      <section class="note"><span>ⓘ</span><p>Игровые ✦ и коллекционные предметы в этой версии не являются настоящими Telegram Stars или блокчейн-NFT.</p></section>
+    </main>
+
+    <nav class="bottom-nav">
+      <button class="nav-item active" data-tab="home"><span>⌂</span>Главная</button>
+      <button class="nav-item" data-tab="collection"><span>◇</span>Коллекция</button>
+      <button class="nav-item" data-tab="profile"><span>◎</span>Профиль</button>
+    </nav>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <div class="modal-backdrop" id="modal">
+    <div class="modal panel">
+      <button class="close" id="closeModal">×</button>
+      <div id="modalEmoji" class="result-emoji">🎁</div>
+      <div class="eyebrow">НОВОЕ СОКРОВИЩЕ</div>
+      <h2 id="modalName">Ты что-то нашёл!</h2>
+      <div id="modalRarity" class="rarity">Редкость</div>
+      <p>Предмет добавлен в твою коллекцию.</p>
+      <button class="primary full" id="modalOk">Отлично!</button>
+    </div>
+  </div>
+  <script src="/static/app.js"></script>
+</body>
+</html>
