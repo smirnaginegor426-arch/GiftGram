@@ -1,6 +1,13 @@
-import os, json, hmac, hashlib, urllib.parse, sqlite3, random, asyncio, time
+import os
+import json
+import hmac
+import hashlib
+import urllib.parse
+import sqlite3
+import random
+import asyncio
+import time
 from datetime import datetime, timezone
-from contextlib import asynccontextmanager
 
 from aiogram import Bot, Dispatcher
 from aiogram.filters import CommandStart
@@ -9,7 +16,6 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
 import uvicorn
 
 BOT_TOKEN = os.getenv("BOT_TOKEN", "").strip()
@@ -26,10 +32,12 @@ if not WEBAPP_URL.startswith("https://"):
 bot = Bot(BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dp = Dispatcher()
 
+
 def connect():
     con = sqlite3.connect(DB_PATH, timeout=20)
     con.row_factory = sqlite3.Row
     return con
+
 
 def init_db():
     with connect() as con:
@@ -43,6 +51,7 @@ def init_db():
             created_at TEXT NOT NULL
         )""")
 
+
 def upsert_user(user):
     uid = int(user["id"])
     username = user.get("username") or ""
@@ -53,9 +62,11 @@ def upsert_user(user):
         con.execute("UPDATE users SET username=?, first_name=? WHERE user_id=?",
                     (username, first_name, uid))
 
+
 def get_user(uid):
     with connect() as con:
         return con.execute("SELECT * FROM users WHERE user_id=?", (uid,)).fetchone()
+
 
 def validate_init_data(init_data: str):
     if DEV_MODE and not init_data:
@@ -85,6 +96,7 @@ def validate_init_data(init_data: str):
     except Exception:
         raise HTTPException(401, "Не удалось подтвердить Telegram-сессию.")
 
+
 def current_user(authorization: str | None):
     init_data = ""
     if authorization and authorization.startswith("tma "):
@@ -92,6 +104,7 @@ def current_user(authorization: str | None):
     user = validate_init_data(init_data)
     upsert_user(user)
     return user
+
 
 @dp.message(CommandStart())
 async def start(message: Message):
@@ -105,53 +118,78 @@ async def start(message: Message):
         reply_markup=keyboard
     )
 
+
 @dp.message()
 async def help_message(message: Message):
     await message.answer("Нажми /start, чтобы открыть GiftGram.")
 
+
+# Locate frontend files relative to this main.py and its nearby project folders.
+# The files can be in separate folders; index.html and style.css are searched independently.
 app = FastAPI(title="GiftGram Mini App")
-
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-WEB_DIR = os.path.join(BASE_DIR, "Web", "web")
+SKIP_DIRS = {
+    ".git", "__pycache__", ".venv", "venv", "node_modules", ".cache",
+    ".next", "dist", "build"
+}
 
-app = FastAPI(title="GiftGram Mini App")
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+def find_file(filename):
+    search_roots = []
+    current = BASE_DIR
+    # The described repository has nested Web folders; search this directory and
+    # up to three parent directories without scanning the entire server filesystem.
+    for _ in range(4):
+        if current not in search_roots:
+            search_roots.append(current)
+        parent = os.path.dirname(current)
+        if parent == current:
+            break
+        current = parent
 
-WEB_DIR = None
-INDEX_FILE = None
+    for search_root in search_roots:
+        matches = []
+        for root, dirs, files in os.walk(search_root):
+            dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
+            for name in files:
+                if name.lower() == filename.lower():
+                    matches.append(os.path.join(root, name))
+        if matches:
+            # Prefer the file with the shortest path from this search root.
+            return min(
+                matches,
+                key=lambda path: len(os.path.relpath(path, search_root).split(os.sep))
+            )
+    return None
 
-for root, dirs, files in os.walk(BASE_DIR):
-    index_name = next(
-        (f for f in files if f.lower() == "index.html"), None
-    )
-    style_name = next(
-        (f for f in files if f.lower() == "style.css"), None
-    )
 
-    if index_name and style_name:
-        WEB_DIR = root
-        INDEX_FILE = os.path.join(root, index_name)
-        break
+INDEX_FILE = find_file("index.html")
+STYLE_FILE = find_file("style.css")
 
-if WEB_DIR is None:
-    raise RuntimeError(
-        "Не найдены index.html и style.css в одной папке."
-    )
+if INDEX_FILE is None:
+    print(f"WARNING: index.html not found. Searched around {BASE_DIR}")
+else:
+    print(f"GiftGram frontend HTML: {INDEX_FILE}")
+
+if STYLE_FILE is None:
+    print(f"WARNING: style.css not found. Searched around {BASE_DIR}")
+else:
+    print(f"GiftGram stylesheet: {STYLE_FILE}")
+
 
 @app.get("/")
 async def index():
-    return FileResponse(INDEX_FILE)
-
-app.mount(
-    "/static",
-    StaticFiles(directory=WEB_DIR),
-    name="static"
-)
+    if INDEX_FILE is None:
+        raise HTTPException(404, "Не найден index.html. Проверь расположение файла в GitHub.")
+    return FileResponse(INDEX_FILE, media_type="text/html")
 
 
-
-
+@app.get("/static/style.css")
+@app.get("/style.css")
+async def stylesheet():
+    if STYLE_FILE is None:
+        raise HTTPException(404, "Не найден style.css. Проверь расположение файла в GitHub.")
+    return FileResponse(STYLE_FILE, media_type="text/css")
 
 
 @app.get("/api/me")
@@ -168,6 +206,7 @@ async def me(authorization: str | None = Header(default=None)):
         "nfts": [dict(n) for n in nfts]
     }
 
+
 @app.post("/api/daily")
 async def daily(authorization: str | None = Header(default=None)):
     tg = current_user(authorization)
@@ -182,6 +221,7 @@ async def daily(authorization: str | None = Header(default=None)):
         balance = con.execute("SELECT stars FROM users WHERE user_id=?", (uid,)).fetchone()["stars"]
     return {"ok": True, "reward": reward, "stars": balance}
 
+
 PRIZES = [
     {"name": "Пиксельный кот", "rarity": "Обычный", "weight": 45, "emoji": "🐈"},
     {"name": "Кристальный череп", "rarity": "Редкий", "weight": 30, "emoji": "💎"},
@@ -190,6 +230,7 @@ PRIZES = [
     {"name": "Космический призрак", "rarity": "Мифический", "weight": 1, "emoji": "👻"},
 ]
 CASE_COST = 50
+
 
 @app.post("/api/case")
 async def open_case(authorization: str | None = Header(default=None)):
@@ -210,6 +251,7 @@ async def open_case(authorization: str | None = Header(default=None)):
     return {"ok": True, "stars": balance, "nft": {"id": nft_id, "name": prize["name"],
             "rarity": prize["rarity"], "level": 1, "emoji": prize["emoji"]}}
 
+
 @app.post("/api/upgrade/{nft_id}")
 async def upgrade(nft_id: int, authorization: str | None = Header(default=None)):
     tg = current_user(authorization)
@@ -228,9 +270,11 @@ async def upgrade(nft_id: int, authorization: str | None = Header(default=None))
         new_level = int(nft["level"]) + 1
     return {"ok": True, "stars": balance, "level": new_level, "cost": cost}
 
+
 @app.get("/api/health")
 async def health():
     return {"ok": True, "app": "GiftGram"}
+
 
 async def run():
     init_db()
@@ -238,6 +282,6 @@ async def run():
     server = uvicorn.Server(config)
     await asyncio.gather(dp.start_polling(bot), server.serve())
 
+
 if __name__ == "__main__":
     asyncio.run(run())
-
