@@ -111,11 +111,17 @@ async def help_message(message: Message):
 
 app = FastAPI(title="GiftGram Mini App")
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+WEB_DIR = os.path.join(BASE_DIR, "Web", "web")
+
 @app.get("/")
 async def index():
-    return FileResponse(os.path.join("web", "index.html"))
+    return FileResponse(os.path.join(WEB_DIR, "index.html"))
 
-app.mount("/static", StaticFiles(directory="web"), name="static")
+app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
+
+
+
 
 @app.get("/api/me")
 async def me(authorization: str | None = Header(default=None)):
