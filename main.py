@@ -114,11 +114,42 @@ app = FastAPI(title="GiftGram Mini App")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 WEB_DIR = os.path.join(BASE_DIR, "Web", "web")
 
+app = FastAPI(title="GiftGram Mini App")
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+WEB_DIR = None
+INDEX_FILE = None
+
+for root, dirs, files in os.walk(BASE_DIR):
+    index_name = next(
+        (f for f in files if f.lower() == "index.html"), None
+    )
+    style_name = next(
+        (f for f in files if f.lower() == "style.css"), None
+    )
+
+    if index_name and style_name:
+        WEB_DIR = root
+        INDEX_FILE = os.path.join(root, index_name)
+        break
+
+if WEB_DIR is None:
+    raise RuntimeError(
+        "Не найдены index.html и style.css в одной папке."
+    )
+
 @app.get("/")
 async def index():
-    return FileResponse(os.path.join(WEB_DIR, "index.html"))
+    return FileResponse(INDEX_FILE)
 
-app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
+app.mount(
+    "/static",
+    StaticFiles(directory=WEB_DIR),
+    name="static"
+)
+
+
 
 
 
